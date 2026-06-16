@@ -16,3 +16,4 @@ htmlcov/
 .env.*
 
 uploads/
+data/data
