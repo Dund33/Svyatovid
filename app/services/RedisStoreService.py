@@ -4,7 +4,7 @@ import bcrypt
 import numpy as np
 import redis
 
-from src.models.SpeakerProfile import SpeakerProfile
+from models.UserProfile import UserProfile
 
 from redis.commands.search.field import TextField, VectorField
 
@@ -65,14 +65,14 @@ class RedisStoreService:
             if "Index already exists" not in str(e):
                 raise
 
-    def get_profile(self, login: str) -> SpeakerProfile | None:
+    def get_profile(self, login: str) -> UserProfile | None:
 
         data = self.redis.hgetall(self._key(login))
 
         if not data:
             return None
 
-        return SpeakerProfile(
+        return UserProfile(
             login=data[b"login"].decode(),
             password_hash=data[b"password_hash"].decode(),
             embedding=self._from_bytes(data[b"embedding"]),
