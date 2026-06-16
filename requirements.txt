@@ -1,6 +1,9 @@
 deepface
+tf-keras
 scikit-learn
 numpy
 redis
 bcrypt
 Flask
+kagglehub
+Pillow
