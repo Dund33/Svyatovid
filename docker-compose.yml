@@ -1,0 +1,31 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: svyatovid-api:latest
+    container_name: svyatovid-api
+    ports:
+      - "5000:5000"
+    environment:
+      PYTHONPATH: /app
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+    volumes:
+      - deepface_data:/root/.deepface
+    restart: unless-stopped
+
+  redis:
+    image: redis/redis-stack:latest
+    container_name: svyatovid-redis
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  deepface_data:
+  redis_data:

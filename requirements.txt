@@ -1,0 +1,5 @@
+deepface
+scikit-learn
+numpy
+redis
+bcrypt
