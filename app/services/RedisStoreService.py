@@ -91,7 +91,7 @@ class RedisStoreService:
             },
         )
 
-    def find_similar_speakers(self, embedding: np.ndarray, top_k: int = 1):
+    def find_similar_users(self, embedding: np.ndarray, top_k: int = 1):
 
         query = (
             Query(f"*=>[KNN {top_k} @embedding $vec AS score]")
