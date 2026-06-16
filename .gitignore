@@ -16,4 +16,4 @@ htmlcov/
 .env.*
 
 uploads/
-data/data
+dataset/data
