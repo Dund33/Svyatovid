@@ -94,5 +94,12 @@ def ping():
     return jsonify({"ok": True})
 
 
+@app.post("/clear")
+def clear():
+    deleted = redis_store_service.clear_profiles()
+
+    return jsonify({"message": "cleared", "deleted": deleted}), 200
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
