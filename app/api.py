@@ -4,6 +4,7 @@ from flask import Flask, jsonify, request
 
 from services.RedisStoreService import RedisStoreService
 from services.UploadService import UploadService
+from ai_tools import face_embeddings_from_images
 from tools import create_user_embedding_from_images
 
 
@@ -14,6 +15,7 @@ redis_store_service = RedisStoreService(
     redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
     embedding_dim=int(os.getenv("EMBEDDING_DIM", "512")),
 )
+face_match_threshold = float(os.getenv("FACE_MATCH_THRESHOLD", "0.3"))
 
 
 @app.post("/register")
@@ -48,6 +50,43 @@ def register():
     )
 
     return jsonify({"message": "registered", "username": username}), 201
+
+
+@app.post("/login")
+def login():
+    if not request.files:
+        return jsonify({"error": "image file required"}), 400
+
+    file_paths = upload_service.save_files(request.files)
+
+    if not file_paths:
+        return jsonify({"error": "image file required"}), 400
+
+    try:
+        embeddings = face_embeddings_from_images(file_paths)
+    except ValueError:
+        return jsonify({"error": "unauthorized"}), 401
+
+    if not embeddings:
+        return jsonify({"error": "unauthorized"}), 401
+
+    redis_store_service.ensure_index()
+
+    for embedding in embeddings:
+        result = redis_store_service.find_similar_users(embedding, top_k=1)
+        if _has_matching_user(result):
+            return jsonify({"message": "logged in"}), 200
+
+    return jsonify({"error": "unauthorized"}), 401
+
+
+def _has_matching_user(result) -> bool:
+    for document in getattr(result, "docs", []):
+        score = float(document.score)
+        if score <= face_match_threshold:
+            return True
+
+    return False
 
 
 @app.route("/ping")
