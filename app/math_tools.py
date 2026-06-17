@@ -1,38 +1,30 @@
-from collections import Counter
-from typing import Any, Iterable
+from typing import Iterable
 
 import numpy as np
-from sklearn.cluster import DBSCAN
 from sklearn.metrics import pairwise_distances
 
 
-def largest_dbscan_cluster(
+def largest_cosine_similarity_component(
     vectors: Iterable[np.ndarray],
-    eps: float = 0.5,
-    min_samples: int = 2,
-    metric: str = "euclidean",
-    **dbscan_kwargs: Any,
+    similarity_threshold: float = 0.6,
 ) -> list[np.ndarray]:
-    """Return arrays belonging to the largest non-noise DBSCAN cluster."""
+    """Return arrays from the largest connected component by cosine similarity."""
     items, matrix = _to_matrix(vectors)
 
     if not items:
         return []
 
-    labels = DBSCAN(
-        eps=eps,
-        min_samples=min_samples,
-        metric=metric,
-        **dbscan_kwargs,
-    ).fit_predict(matrix)
+    normalized = _normalize_rows(matrix)
+    similarities = normalized @ normalized.T
+    adjacency = similarities >= similarity_threshold
+    components = _connected_components(adjacency)
 
-    label_counts = Counter(label for label in labels if label != -1)
-    if not label_counts:
+    if not components:
         return []
 
-    largest_label, _ = label_counts.most_common(1)[0]
+    largest_component = max(components, key=len)
 
-    return [item for item, label in zip(items, labels) if label == largest_label]
+    return [items[index] for index in largest_component]
 
 
 def medoid(vectors: Iterable[np.ndarray], metric: str = "euclidean") -> np.ndarray:
@@ -71,3 +63,40 @@ def _to_matrix(vectors: Iterable[np.ndarray]) -> tuple[list[np.ndarray], np.ndar
         flattened.append(flat)
 
     return items, np.vstack(flattened)
+
+
+def _normalize_rows(matrix: np.ndarray) -> np.ndarray:
+    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+
+    if np.any(norms == 0):
+        raise ValueError("Cannot normalize a zero vector.")
+
+    return matrix / norms
+
+
+def _connected_components(adjacency: np.ndarray) -> list[list[int]]:
+    visited = set()
+    components = []
+
+    for start_index in range(adjacency.shape[0]):
+        if start_index in visited:
+            continue
+
+        component = []
+        stack = [start_index]
+        visited.add(start_index)
+
+        while stack:
+            index = stack.pop()
+            component.append(index)
+
+            neighbors = np.flatnonzero(adjacency[index])
+            for neighbor in neighbors:
+                neighbor = int(neighbor)
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    stack.append(neighbor)
+
+        components.append(component)
+
+    return components

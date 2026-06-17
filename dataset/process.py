@@ -164,17 +164,21 @@ def _create_composite_image(
     face_size: int,
     rng: random.Random,
 ) -> Image.Image:
-    base_image = _load_square_image(base_image_path, image_size)
+    from PIL import Image
+
+    composite = Image.new("RGB", (image_size, image_size), color=(255, 255, 255))
+    base_image = _load_square_image(base_image_path, face_size)
     face_image = _load_square_image(face_image_path, face_size)
-    position = _random_face_position(
+    base_position, face_position = _random_image_positions(
         image_size=image_size,
         face_size=face_size,
         rng=rng,
     )
 
-    base_image.paste(face_image, position)
+    composite.paste(base_image, base_position)
+    composite.paste(face_image, face_position)
 
-    return base_image
+    return composite
 
 
 def _load_square_image(image_path: Path, size: int) -> Image.Image:
@@ -186,19 +190,78 @@ def _load_square_image(image_path: Path, size: int) -> Image.Image:
         return ImageOps.fit(image, (size, size), Image.Resampling.LANCZOS)
 
 
-def _random_face_position(
+def _random_image_positions(
+    image_size: int,
+    face_size: int,
+    rng: random.Random,
+) -> tuple[tuple[int, int], tuple[int, int]]:
+    first_position = _random_image_position(
+        image_size=image_size,
+        face_size=face_size,
+        rng=rng,
+    )
+    second_position = _random_non_overlapping_image_position(
+        existing_position=first_position,
+        image_size=image_size,
+        face_size=face_size,
+        rng=rng,
+    )
+
+    return first_position, second_position
+
+
+def _random_non_overlapping_image_position(
+    existing_position: tuple[int, int],
+    image_size: int,
+    face_size: int,
+    rng: random.Random,
+    attempts: int = 100,
+) -> tuple[int, int]:
+    for _ in range(attempts):
+        candidate = _random_image_position(
+            image_size=image_size,
+            face_size=face_size,
+            rng=rng,
+        )
+
+        if not _rectangles_overlap(
+            first_position=existing_position,
+            second_position=candidate,
+            size=face_size,
+        ):
+            return candidate
+
+    return _random_image_position(
+        image_size=image_size,
+        face_size=face_size,
+        rng=rng,
+    )
+
+
+def _random_image_position(
     image_size: int,
     face_size: int,
     rng: random.Random,
 ) -> tuple[int, int]:
-    max_center_offset = (image_size - face_size) // 2
-    center = image_size // 2
-    face_half = face_size // 2
+    max_coordinate = image_size - face_size
 
-    x_center = center + rng.randint(-max_center_offset, max_center_offset)
-    y_center = center + rng.randint(-max_center_offset, max_center_offset)
+    return rng.randint(0, max_coordinate), rng.randint(0, max_coordinate)
 
-    return x_center - face_half, y_center - face_half
+
+def _rectangles_overlap(
+    first_position: tuple[int, int],
+    second_position: tuple[int, int],
+    size: int,
+) -> bool:
+    first_x, first_y = first_position
+    second_x, second_y = second_position
+
+    return (
+        first_x < second_x + size
+        and first_x + size > second_x
+        and first_y < second_y + size
+        and first_y + size > second_y
+    )
 
 
 def _parse_args() -> argparse.Namespace:
