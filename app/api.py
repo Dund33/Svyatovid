@@ -10,7 +10,7 @@ from tools import create_user_embedding_from_images
 
 app = Flask(__name__)
 
-upload_service = UploadService(os.getenv("UPLOAD_FOLDER", "/app/uploads"))
+upload_service = UploadService(os.getenv("UPLOAD_FOLDER", "uploads"))
 redis_store_service = RedisStoreService(
     redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
     embedding_dim=int(os.getenv("EMBEDDING_DIM", "512")),

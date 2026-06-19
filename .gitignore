@@ -16,4 +16,7 @@ htmlcov/
 .env.*
 
 uploads/
-dataset/data
+
+data/
+
+tinyface/
